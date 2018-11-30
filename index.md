@@ -5,7 +5,7 @@ title: Analysis of ChIP-seq data
 
 <blockquote>
 <small>
-This tutorial was inspired by efforts of [Mo Heydarian](https://galaxyproject.org/people/mo-heydarian/) and [Mallory Freeberg](https://github.com/malloryfreeberg). Tools higlighted here have been wrapped by [Björn Grüning](https://github.com/bgruening), [Marius van den Beek](https://github.com/mvdbeek) and other [IUC](https://galaxyproject.org/iuc/) members. [Dave Bouvier](https://github.com/davebx) and [Martin Cech](https://github.com/martenson) helped fine tuning and deploying tools to Galaxy's public server. 
+This tutorial was inspired by efforts of [Mo Heydarian](https://galaxyproject.org/people/mo-heydarian/) and [Mallory Freeberg](https://github.com/malloryfreeberg). Tools higlighted here have been wrapped by [Björn Grüning](https://github.com/bgruening), [Marius van den Beek](https://github.com/mvdbeek) and other [IUC](https://galaxyproject.org/iuc/) members. [Dave Bouvier](https://github.com/davebx) and [Martin Cech](https://github.com/martenson) helped fine tuning and deploying tools to Galaxy's public server.
 </small>
 </blockquote>
 
@@ -23,29 +23,30 @@ In this tutorial we will:
 
 # Data
 
-Datasets for this tutorial were provided by [Shaun Mahony](http://mahonylab.org/) and were generated in the lab of [Frank Pugh](http://bmb.psu.edu/directory/bfp2).
+Datasets for this tutorial were generated in the lab of [Frank Pugh](http://bmb.psu.edu/directory/bfp2), and are sourced from [GEO entry GSE98573](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE98573)
 
-## Reb1 ChIP-exo
+## TBP ChIP-exo
 
-For this analysis we will be using [ChIP-exo](http://www.sciencedirect.com/science/article/pii/S0092867411013511) datasets. For this experiment immunoprecipitation was performed with antobodies against Reb1. Reb1 recognizes a specific sequence (`TTACCCG`) and is involved in many aspects of transcriptional regulation by all three yeast RNA polymerases and promotes formation of nucleosome-free regions (NFRs) ([Hartley & Madhani:2009](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2677553/);  [Raisner:2005](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2039754/)).
+For this analysis we will be using [ChIP-exo](http://www.sciencedirect.com/science/article/pii/S0092867411013511) datasets. For this experiment, immunoprecipitation was performed with antibodies against an epitope-tagged version of TBP (Spt15 gene in yeast). TBP is the TATA-binding protein, a general transcription factor that interacts with other factors to form the preinitiation complex at promoters ([SGD](https://www.yeastgenome.org/locus/S000000950)).
 
-<div class="alert alert-info" role="alert">
-Although this is ChIP-exo data, in this tutorial we will analyze it as if it were standard ChIP-seq. We will explain peculiarities of ChIP-exo analysis in a dedicated tutorial.
-</div>
+This ChIP-exo library is paired-end. We will use the paired-end information to remove PCR duplicates. However, in a paired-end ChIP-exo library, only the first mate reads represents the ends of the DNA fragments that were digested by exonuclease. The second mate reads represent the same information as would have been produced by a ChIP-seq experiment.
+
 
 ## Data description
 
-There are four datasets:
+There are six paired-end datasets in total:
 
 | Dataset            | Description                |
 |--------------------|----------------------------|
-| Reb1_R1            | ChIP experiment, Replicate 1 |
-| Input_R1           | Input DNA, Replicate 1 |
-| Reb1_R2            | ChIP experiment, Replicate 2 |
-| Input_R2           | Input DNA, Replicate 2 |
+| TBP_MHS_rep1	 | TBP ChIP-exo experiment for mock heatshock, replicate 1 |
+| TBP_MHS_rep2	 | TBP ChIP-exo experiment for mock heatshock, replicate 2 |
+| TBP_HS3_rep1	 | TBP ChIP-exo experiment for 3 mins of heatshock, replicate 1 |
+| TBP_HS3_rep2	 | TBP ChIP-exo experiment for 3 mins of heatshock, replicate 2 |
+| control_MHS_rep1	 | Control experiment for mock heatshock, replicate 1 |
+| control_HS3_rep1	 | Control experiment for 3 mins of heatshock, replicate 1 |
+
 
 ## Data location
-
 
 <!-- Modal for Library import video -->
 <div class="modal fade" id="lib_video" tabindex="-1" role="dialog" aria-labelledby="libVid">
@@ -59,40 +60,26 @@ There are four datasets:
       			<div class="embed-responsive embed-responsive-16by9">
   					<iframe class="embed-responsive-item" src="https://player.vimeo.com/video/212753639"></iframe>
 				</div>
-			</div>	
+			</div>
     	</div>
   	</div>
 </div>
 
-These datasets are deposited in a [Galaxy library](https://usegalaxy.org/library/list#folders/F050cbba300e2dbed) (watch <a href="#" data-toggle="modal" data-target="#lib_video">Video</a> on how to import data from a library):
+These datasets are deposited in a [shared Galaxy history](https://usegalaxy.org:/u/shaunmahony/h/yeast-tbp-chip-exo-fastq) (watch <a href="#" data-toggle="modal" data-target="#lib_video">Video</a> on how to import data from a library):
 
 |      |
 |------|
 |![](/src/tutorials/chip/lib.png)|
-|<small>**Galaxy data library containing the reads**. Here you can see two replicates (`R1` and `R2`). This is single-end data. Upload datasets into a new history by selecting all datasets and clicking `to History` button. Name the new history and click `Import` (watch <a href="#" data-toggle="modal" data-target="#lib_video">this video</a>).</small>|
+|<small>**Galaxy data library containing the reads**. This is paired-end data. Upload datasets into a new history by clicking `Import History`. Name the new history.</small>|
 
 
-<!-- Modal for Creating collection video -->
-<div class="modal fade" id="collection_create_video" tabindex="-1" role="dialog" aria-labelledby="collection_create_Vid">
-  	<div class="modal-dialog" role="document">
-    	<div class="modal-content">
-      		<div class="modal-header">
-        		<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        		<h4 class="modal-title" id="myModalLabel">Creating a dataset collection | Single end data</h4>
-      		</div>
-      		<div class="modal-body">
-      			<div class="embed-responsive embed-responsive-16by9">
-  					<iframe class="embed-responsive-item" src="https://player.vimeo.com/video/212757252"></iframe>
-				</div>
-			</div>	
-    	</div>
-  	</div>
-</div>
+## Creating collection
 
-
-## Uploading 
-
-After uploading datasets into Galaxy history we will combine all datasets into a single dataset collection. This will simplify downstream processing of the data. The process for creating a collection for this tutorial is <a href="#" data-toggle="modal" data-target="#collection_create_video">is shown here</a>.
+After uploading datasets into Galaxy history we will combine all datasets into a single dataset collection. This will simplify downstream processing of the data. Select all datasets and click "Build list of dataset pairs" under "For all selected...".
+|      |
+|------|
+|![](src/tutorials/chip/mapping.png)|
+|<small>**Files should be paired automatically, resulting in a collection of 6 paired fastq files.**.</small>
 
 # Mapping and Post-processing
 
@@ -102,7 +89,7 @@ In this particular case the data is of very high quality and do not need to be t
 
 |      |
 |------|
-|![](/src/tutorials/chip/mapping.png)|
+|![](src/tutorials/chip/mapping.png)|
 |<small>**Mapping all data at once**. Note that **Select input type** is set to `Single fastq` and by selecting folder (<i class="far fa-folder" aria-hidden="true"></i>) button you can select as entire collection of fastq datasets. **Important**: here we also set readgroups automatically by toggling **Set readgroups information** dropdown to `Set readgroups (SAM/BAM specification)` and setting all **Auto-assign** button to `Yes`. </small>
 
 <div class="alert alert-warning" role="alert"><i class="fa fa-exclamation-circle" aria-hidden="true"></i> Running `BWA` on a collection will generate another collection of BAM files. Name this collection `mapped data` (for help on how to rename a collection <a href="#" data-toggle="modal" data-target="#collection_rename_video">see this video)</a>.</div>
@@ -119,7 +106,7 @@ In this particular case the data is of very high quality and do not need to be t
       			<div class="embed-responsive embed-responsive-16by9">
   					<iframe class="embed-responsive-item" src="https://player.vimeo.com/video/212758694"></iframe>
 				</div>
-			</div>	
+			</div>
     	</div>
   	</div>
 </div>
@@ -138,11 +125,11 @@ For post-processing we will remove all non-uniquely mapped reads. This can be do
 
 # Assessment of ChIP quality
 
-After we mapped and filtered the reads it is time to make some inferences about how good the underlying data is. 
+After we mapped and filtered the reads it is time to make some inferences about how good the underlying data is.
 
 ## Correlation among samples
 
-In out experiment there are two replicates, each containing treatment and input (control) datasets. The first thing we can check is if the samples are correlated (in other words if treatment and control samples across the two replicates contain this same kind of signal). To do this we first generate read count matrix using **NGS: DeepTools &rarr; multiBamSummary**. 
+In out experiment there are two replicates, each containing treatment and input (control) datasets. The first thing we can check is if the samples are correlated (in other words if treatment and control samples across the two replicates contain this same kind of signal). To do this we first generate read count matrix using **NGS: DeepTools &rarr; multiBamSummary**.
 
 |      |
 |------|
@@ -207,7 +194,7 @@ Window   ChIP-count Input-count
 9          45         3
 ```
 
-Now let's add another two columns to this dataset. These columns will show percentage of reads summing up to each row for ChIP and Input data. For example, 0.044 on row 3 is (1 + 2 + 2)/113 = 0.044. 
+Now let's add another two columns to this dataset. These columns will show percentage of reads summing up to each row for ChIP and Input data. For example, 0.044 on row 3 is (1 + 2 + 2)/113 = 0.044.
 
 ```
  1   2   3  4      5
@@ -228,7 +215,7 @@ Now let's add another two columns to this dataset. These columns will show perce
 Where:
 
 1 = Window, 2 = read count in ChIP, 3 = read count in Input
-4 = % or read to this point in ChIP 5 = % of read to this point 
+4 = % or read to this point in ChIP 5 = % of read to this point
 ```
 
 In the matrix above a large portion of ChIP reads (column 4) is concentrated in the few bins close to the bottom. This is not the case for the input reads (column 5). If we plot two last columns of this matrix we will get a curve like this:
@@ -285,13 +272,13 @@ We will use **NGS: DeepTools &rarr; bamCoverage**:
       			<div class="embed-responsive embed-responsive-16by9">
   					<iframe class="embed-responsive-item" src="https://player.vimeo.com/video/123414437"></iframe>
 				</div>
-			</div>	
+			</div>
     	</div>
   	</div>
 </div>
 
 
-Now we can display bigWig datasets generated in the previous section in a genome browser. There is a variety of available browsers. In this tutorial we will use IGV Browser (this <a href="#" data-toggle="modal" data-target="#igv_video">video</a> shows how to display multiple datasets in IGV). 
+Now we can display bigWig datasets generated in the previous section in a genome browser. There is a variety of available browsers. In this tutorial we will use IGV Browser (this <a href="#" data-toggle="modal" data-target="#igv_video">video</a> shows how to display multiple datasets in IGV).
 
 |      |
 |------|
@@ -336,7 +323,7 @@ Here is a concise description of these steps:
 |<small>Peaks mapped to two strands are treated separately to build two coverage density profiles - two two modes. The distance between the modes is the fragment size `d`. This profile is build from 1,000 randomply selected enriched regions (From [Zhang:2008](https://www.ncbi.nlm.nih.gov/pubmed?cmd=search&term=18798982)).</small>|
 
 
-- **Generate peaks** - now that *d* has been defined MACS slides a window of size *2d* across the genome to identify regions significantly enriched in the ChIP sample. MACS assumes that background reads obey [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution). Thus given the number of reads in a given interval within the control sample we can calculate the probability of having observed number of reads in the ChIP sample (e.g., see flood example [here](https://en.wikipedia.org/wiki/Poisson_distribution#Examples_of_probability_for_Poisson_distributions)). This procedure is performed for several intervals around the examined location (*2d*, 1kb, 5kb, 10kb, and the whole genome) and the maximum value is chosen. One problem with this approach is that it only works if both samples (ChIP and control) are sequenced to the depth, which is not usually happening in practice. To correct with this MACS scales down the larger sample. 
+- **Generate peaks** - now that *d* has been defined MACS slides a window of size *2d* across the genome to identify regions significantly enriched in the ChIP sample. MACS assumes that background reads obey [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution). Thus given the number of reads in a given interval within the control sample we can calculate the probability of having observed number of reads in the ChIP sample (e.g., see flood example [here](https://en.wikipedia.org/wiki/Poisson_distribution#Examples_of_probability_for_Poisson_distributions)). This procedure is performed for several intervals around the examined location (*2d*, 1kb, 5kb, 10kb, and the whole genome) and the maximum value is chosen. One problem with this approach is that it only works if both samples (ChIP and control) are sequenced to the depth, which is not usually happening in practice. To correct with this MACS scales down the larger sample.
 
 - **Compute False Discovery Rate (FDR)** - [Feng:2012](http://www.nature.com/nprot/journal/v7/n9/full/nprot.2012.101.html) explains computing FDR in MACS as follows: <em>"When a control sample is available </em>(and you should really always use it - AN)<em>, MACS can also estimate an empirical FDR for every peak by exchanging the ChIP-seq and control samples and identifying peaks in the control sample using the same set of parameters used for the ChIP-seq sample. Because the control sample should not exhibit read enrichment, any such peaks found by MACS can be regarded as false positives. For a particular P value threshold, the empirical FDR is then calculated as the number of control peaks passing the threshold divided by the number of ChIP-seq peaks passing the same threshold." </em>
 
@@ -393,7 +380,7 @@ In the case of these data peaks are very sharp and have narrow gap between them:
 |                |
 |----------------|
 |![](/src/tutorials/chip/macs1.png)|
-|<small>**Calling peaks with `MACS2` on pooled data**. Here we choose multiple inputs by pressing <i class="far fa-copy" aria-hidden="true"></i> button and selecting both ChIP datasets in **ChIP-Seq Treatment File** and both Input DNA datasets in **ChIP-Seq Control File**. We then select `Saccharomyces cerevisiae` genome as the **Effective genome size**. `MACS2`s interface is long and we split it into several pieces in this figure. See the lower section as well - it is important!</small>| 
+|<small>**Calling peaks with `MACS2` on pooled data**. Here we choose multiple inputs by pressing <i class="far fa-copy" aria-hidden="true"></i> button and selecting both ChIP datasets in **ChIP-Seq Treatment File** and both Input DNA datasets in **ChIP-Seq Control File**. We then select `Saccharomyces cerevisiae` genome as the **Effective genome size**. `MACS2`s interface is long and we split it into several pieces in this figure. See the lower section as well - it is important!</small>|
 |![](/src/tutorials/chip/macs2.png)|
 |<small>In this lower part of `MACS2` interface set **Build model** to `Do not build the shifting model` (we have already done this with `preductd` in the previous step) and **Set extension size* to `30` (the number we estimated in the previous step). Finally, we will only ask `MACS2` to produce two outputs: `Peak summits` and the one it produced by default, which contains peak coordinates.</small>|
 
@@ -458,7 +445,7 @@ where columns  are:
  1. Strand (irrelevant in this case)
  1. Fold-change (fold enrichment for this peak summit against random Poisson distribution with local [lambda](https://en.wikipedia.org/wiki/Poisson_distribution))
  1. -log<sub>10</sub>*P*-value (e.g., 17.68 is 1 x 10<sup>-17</sup>)
- 1. -log<sub>10</sub>*Q*-value from [Benjamini–Hochberg–Yekutieli procedure](https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini.E2.80.93Hochberg.E2.80.93Yekutieli_procedure.) 
+ 1. -log<sub>10</sub>*Q*-value from [Benjamini–Hochberg–Yekutieli procedure](https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini.E2.80.93Hochberg.E2.80.93Yekutieli_procedure.)
  1. Relative summit position to peak start
 
 ## How many peaks are common between replicates?
@@ -594,6 +581,3 @@ This entire analysis is available as a Galaxy history [here](https://usegalaxy.o
 # And so it goes...
 
 Hopefully this tutorial has given you the taste for what is possible. There are more tools out there so experiment! If things do not work - complain using `Open Chat` button below or our [BioStar](https://biostar.usegalaxy.org/) channel.
-
-
-
