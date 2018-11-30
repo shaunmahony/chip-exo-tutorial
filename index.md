@@ -3,11 +3,9 @@ autotoc: true
 title: Analysis of ChIP-seq data
 ---
 
-<blockquote>
 <small>
 This tutorial was inspired by efforts of [Mo Heydarian](https://galaxyproject.org/people/mo-heydarian/) and [Mallory Freeberg](https://github.com/malloryfreeberg). Tools higlighted here have been wrapped by [Björn Grüning](https://github.com/bgruening), [Marius van den Beek](https://github.com/mvdbeek) and other [IUC](https://galaxyproject.org/iuc/) members. [Dave Bouvier](https://github.com/davebx) and [Martin Cech](https://github.com/martenson) helped fine tuning and deploying tools to Galaxy's public server.
 </small>
-</blockquote>
 
 In this tutorial we will:
 
@@ -29,12 +27,12 @@ Datasets for this tutorial were generated in the lab of [Frank Pugh](http://bmb.
 
 For this analysis we will be using [ChIP-exo](http://www.sciencedirect.com/science/article/pii/S0092867411013511) datasets. For this experiment, immunoprecipitation was performed with antibodies against an epitope-tagged version of TBP (Spt15 gene in yeast). TBP is the TATA-binding protein, a general transcription factor that interacts with other factors to form the preinitiation complex at promoters ([SGD](https://www.yeastgenome.org/locus/S000000950)).
 
-This ChIP-exo library is paired-end. We will use the paired-end information to remove PCR duplicates. However, in a paired-end ChIP-exo library, only the first mate reads represents the ends of the DNA fragments that were digested by exonuclease. The second mate reads represent the same information as would have been produced by a ChIP-seq experiment.
+Although this is ChIP-exo data, most of the steps we will perform will be be shared with analyses of standard ChIP-seq.
 
 
 ## Data description
 
-There are six paired-end datasets in total:
+There are six datasets in total:
 
 | Dataset            | Description                |
 |--------------------|----------------------------|
@@ -44,6 +42,8 @@ There are six paired-end datasets in total:
 | TBP_HS3_rep2	 | TBP ChIP-exo experiment for 3 mins of heatshock, replicate 2 |
 | control_MHS_rep1	 | Control experiment for mock heatshock, replicate 1 |
 | control_HS3_rep1	 | Control experiment for 3 mins of heatshock, replicate 1 |
+
+These data have already been processed a little in order to remove PCR duplicates. The original data were paired-end sequenced. In a paired-end ChIP-exo library, the first sequencing adapter is ligated to the end of the fragment that is exonuclease digested. Therefore, only the first read mate represents ChIP-exo data, while the second read mate has resolution that one would expect from standard ChIP-seq libraries. PCR duplicates can be detected as read pairs that map to the same coordinates at both reads.
 
 
 ## Data location
@@ -65,34 +65,50 @@ There are six paired-end datasets in total:
   	</div>
 </div>
 
-These datasets are deposited in a [shared Galaxy history](https://usegalaxy.org:/u/shaunmahony/h/yeast-tbp-chip-exo-fastq) (watch <a href="#" data-toggle="modal" data-target="#lib_video">Video</a> on how to import data from a library):
+These datasets are deposited in a [shared Galaxy history](https://usegalaxy.org/u/shaunmahony/h/chip-exo-data-for-yeast-tbp) (watch <a href="#" data-toggle="modal" data-target="#lib_video">Video</a> on how to import data from a library):
 
 |      |
 |------|
-|![](/src/tutorials/chip/lib.png)|
-|<small>**Galaxy data library containing the reads**. This is paired-end data. Upload datasets into a new history by clicking `Import History`. Name the new history.</small>|
+|![](src/tutorials/chip/lib.png)|
+|<small>**Galaxy data library containing the reads**. This is single-end data. Upload datasets into a new history by clicking `Import History`. Name the new history.</small>|
 
 
-## Creating collection
+<!-- Modal for Creating collection video -->
+<div class="modal fade" id="collection_create_video" tabindex="-1" role="dialog" aria-labelledby="collection_create_Vid">
+     <div class="modal-dialog" role="document">
+     <div class="modal-content">
+		<div class="modal-header">
+        	     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        	     	     <h4 class="modal-title" id="myModalLabel">Creating a dataset collection | Single end data</h4>
+      			     	 </div>
+					<div class="modal-body">
+						<div class="embed-responsive embed-responsive-16by9">
+											<iframe class="embed-responsive-item" src="https://player.vimeo.com/video/212757252"></iframe>
+															       </div>
+															         </div>
+    																 </div>
+  																 </div>
+</div>
 
-After uploading datasets into Galaxy history we will combine all datasets into a single dataset collection. This will simplify downstream processing of the data. Select all datasets and click "Build list of dataset pairs" under "For all selected...".
-|      |
-|------|
-|![](src/tutorials/chip/mapping.png)|
-|<small>**Files should be paired automatically, resulting in a collection of 6 paired fastq files.**.</small>
+
+## Creating a data collection
+
+After uploading datasets into Galaxy history we will combine all datasets into a single dataset collection. This will simplify downstream processing of the data. The process for creating a collection for this tutorial is <a href="#" data-toggle="modal" data-target="#collection_create_video">is shown here</a>.
+
 
 # Mapping and Post-processing
 
 ## Mapping
 
-In this particular case the data is of very high quality and do not need to be trimmed or postprocessed in any way before mapping. We will proceed by mapping all the data against the latest version of the yeast genome `sacCer3`:
+In this particular case the data is of very high quality and do not need to be trimmed or postprocessed in any way before mapping. We will proceed by mapping all the data against the latest version of the yeast genome `sacCer3` using BWA:
 
 |      |
 |------|
 |![](src/tutorials/chip/mapping.png)|
-|<small>**Mapping all data at once**. Note that **Select input type** is set to `Single fastq` and by selecting folder (<i class="far fa-folder" aria-hidden="true"></i>) button you can select as entire collection of fastq datasets. **Important**: here we also set readgroups automatically by toggling **Set readgroups information** dropdown to `Set readgroups (SAM/BAM specification)` and setting all **Auto-assign** button to `Yes`. </small>
+|<small>**Mapping all data at once**. Note that **Select input type** is set to `Single fastq` and by selecting folder (<i class="far fa-folder" aria-hidden="true"></i>) button you can select as entire collection of fastq datasets. </small>|
 
 <div class="alert alert-warning" role="alert"><i class="fa fa-exclamation-circle" aria-hidden="true"></i> Running `BWA` on a collection will generate another collection of BAM files. Name this collection `mapped data` (for help on how to rename a collection <a href="#" data-toggle="modal" data-target="#collection_rename_video">see this video)</a>.</div>
+
 
 <!-- Modal for Renaming collection video -->
 <div class="modal fade" id="collection_rename_video" tabindex="-1" role="dialog" aria-labelledby="collection_rename_Vid">
@@ -118,10 +134,11 @@ For post-processing we will remove all non-uniquely mapped reads. This can be do
 
 |      |
 |------|
-|![](/src/tutorials/chip/bam_filter.png)|
+|![](src/tutorials/chip/bam_filter.png)|
 |<small>**Filtering multi-mapped reads** by restricting the data to reads with mapping quality above 20. Note that by selecting folder (<i class="far fa-folder" aria-hidden="true"></i>) button you can select as entire collection of BAM datasets to filter at once.</small>
 
 <div class="alert alert-warning" role="alert"><i class="fa fa-exclamation-circle" aria-hidden="true"></i> Running `Filter SAM or BAM` on a collection will generate another collection of BAM files. Name this collection `filtered data` (for help on how to rename a collection <a href="#" data-toggle="modal" data-target="#collection_rename_video">see this video)</a>.</div>
+
 
 # Assessment of ChIP quality
 
@@ -129,11 +146,11 @@ After we mapped and filtered the reads it is time to make some inferences about 
 
 ## Correlation among samples
 
-In out experiment there are two replicates, each containing treatment and input (control) datasets. The first thing we can check is if the samples are correlated (in other words if treatment and control samples across the two replicates contain this same kind of signal). To do this we first generate read count matrix using **NGS: DeepTools &rarr; multiBamSummary**.
+In our experiment there are two replicates for each of the TBP datasets, and one for each of the controls. The first thing we can check is if the samples are correlated (in other words if treatment samples across the two replicates contain this same kind of signal). To do this we first generate read count matrix using **NGS: DeepTools &rarr; multiBamSummary**.
 
 |      |
 |------|
-|![](/src/tutorials/chip/multibamsummary.png)|
+|![](src/tutorials/chip/multibamsummary.png)|
 |<small>**Running multiBAMsummary** on a collection of BAM datasets (as before you can select collection by pressing folder (<i class="far fa-folder" aria-hidden="true"></i>) button).</small>
 
 This tool breaks genome into bins of fixed size (10,000 bp in our example) and computes the number of reads falling within each bin. Here is a fragment of its output:
